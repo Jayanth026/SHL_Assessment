@@ -1,17 +1,28 @@
+import os
 from fastapi import FastAPI
-from .schemas import *
-from .recommender import SHLRecommender
-from .jd_fetcher import is_url, fetch_jd_text
+from pydantic import BaseModel
+from app.recommender import SHLRecommender
 
 app = FastAPI()
-model = SHLRecommender()
+recommender = SHLRecommender()
 
-@app.get("/health", response_model=HealthResponse)
+class QueryRequest(BaseModel):
+    query: str
+
+@app.get("/health")
 def health():
     return {"status": "healthy"}
 
-@app.post("/recommend", response_model=RecommendResponse)
-def recommend(req: RecommendRequest):
-    q = fetch_jd_text(req.query) if is_url(req.query) else req.query
-    recs = model.recommend(q)
-    return {"recommended_assessments": recs}
+@app.post("/recommend")
+def recommend(req: QueryRequest):
+    return {
+        "recommended_assessments": recommender.recommend(req.query)
+    }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "app.main:app",
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 8000))
+    )
